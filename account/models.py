@@ -28,17 +28,8 @@ from account.hooks import hookset
 from account.managers import EmailAddressManager, EmailConfirmationManager
 from account.signals import signup_code_sent, signup_code_used
 
-
-class Account(models.Model):
-
+class AbstractAccount(models.Model):
     user = models.OneToOneField(AUTH_USER_MODEL, related_name="account", verbose_name=_("user"))
-    timezone = TimeZoneField(_("timezone"))
-    language = models.CharField(
-        _("language"),
-        max_length=10,
-        choices=settings.ACCOUNT_LANGUAGES,
-        default=settings.LANGUAGE_CODE
-    )
 
     @classmethod
     def for_request(cls, request):
@@ -56,17 +47,37 @@ class Account(models.Model):
         create_email = kwargs.pop("create_email", True)
         confirm_email = kwargs.pop("confirm_email", None)
         account = cls(**kwargs)
-        if "language" not in kwargs:
-            if request is None:
-                account.language = settings.LANGUAGE_CODE
-            else:
-                account.language = translation.get_language_from_request(request, check_path=True)
         account.save()
         if create_email and account.user.email:
             kwargs = {"primary": True}
             if confirm_email is not None:
                 kwargs["confirm"] = confirm_email
             EmailAddress.objects.add_email(account.user, account.user.email, **kwargs)
+        return account
+
+    class Meta:
+        abstract = True
+
+class DefaultAccount(AbstractAccount):
+
+    timezone = TimeZoneField(_("timezone"), choices=[("", "---------")] + settings.ACCOUNT_TIMEZONES)
+    language = models.CharField(
+        _("language"),
+        max_length=10,
+        choices=settings.ACCOUNT_LANGUAGES,
+        default=settings.LANGUAGE_CODE
+    )
+
+    @classmethod
+    def create(cls, request=None, **kwargs):
+        if "language" not in kwargs:
+            if request is None:
+                language = settings.LANGUAGE_CODE
+            else:
+                language = translation.get_language_from_request(request, check_path=True)
+            kwargs['language'] = language
+
+        account = super(Account, self).create(cls, request, **kwargs)
         return account
 
     def __str__(self):
@@ -89,6 +100,24 @@ class Account(models.Model):
         if value.tzinfo is None:
             value = pytz.timezone(settings.TIME_ZONE).localize(value)
         return value.astimezone(pytz.timezone(timezone))
+
+    class Meta:
+        abstract = True
+
+
+if settings.ACCOUNT_MODEL:
+    components = settings.ACCOUNT_MODEL.split('.')
+    mod = __import__('.'.join(components[:-1]))
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    DefaultAccount = mod
+    class Account(AbstractAccount, DefaultAccount):
+        pass
+
+else:
+    class Account(DefaultAccount):
+        pass
+
 
 
 @receiver(post_save, sender=AUTH_USER_MODEL)

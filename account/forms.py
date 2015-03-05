@@ -15,10 +15,10 @@ from django.contrib import auth
 from account.compat import get_user_model, get_user_lookup_kwargs
 from account.conf import settings
 from account.hooks import hookset
-from account.models import EmailAddress
+from account.models import EmailAddress, Account
 
 
-alnum_re = re.compile(r"^\w+$")
+alnum_re = re.compile(settings.ACCOUNT_USERNAME_PATTERN)
 
 
 class SignupForm(forms.Form):
@@ -192,20 +192,9 @@ class PasswordResetTokenForm(forms.Form):
         return self.cleaned_data["password_confirm"]
 
 
-class SettingsForm(forms.Form):
+class SettingsForm(forms.ModelForm):
 
     email = forms.EmailField(label=_("Email"), required=True)
-    timezone = forms.ChoiceField(
-        label=_("Timezone"),
-        choices=[("", "---------")] + settings.ACCOUNT_TIMEZONES,
-        required=False
-    )
-    if settings.USE_I18N:
-        language = forms.ChoiceField(
-            label=_("Language"),
-            choices=settings.ACCOUNT_LANGUAGES,
-            required=False
-        )
 
     def clean_email(self):
         value = self.cleaned_data["email"]
@@ -215,3 +204,7 @@ class SettingsForm(forms.Form):
         if not qs.exists() or not settings.ACCOUNT_EMAIL_UNIQUE:
             return value
         raise forms.ValidationError(_("A user is registered with this email address."))
+
+    class Meta:
+        model = Account
+        exclude = ['user']

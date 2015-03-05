@@ -660,6 +660,7 @@ class SettingsView(LoginRequiredMixin, FormView):
 
     template_name = "account/settings.html"
     form_class = SettingsForm
+    model = Account
     redirect_field_name = "next"
     messages = {
         "settings_updated": {
@@ -677,11 +678,17 @@ class SettingsView(LoginRequiredMixin, FormView):
 
     def get_initial(self):
         initial = super(SettingsView, self).get_initial()
+        for field in self.form_class.declared_fields:
+            if hasattr(self.request.user.account, field):
+                initial[field] = getattr(self.request.user.account, field)
         if self.primary_email_address:
             initial["email"] = self.primary_email_address.email
-        initial["timezone"] = self.request.user.account.timezone
-        initial["language"] = self.request.user.account.language
         return initial
+
+    def get_form(self, form_class):
+        kwargs = self.get_form_kwargs()
+        kwargs['instance'] = self.request.user.account
+        return form_class(**kwargs)
 
     def form_valid(self, form):
         self.update_settings(form)
@@ -721,16 +728,10 @@ class SettingsView(LoginRequiredMixin, FormView):
         return ctx
 
     def update_account(self, form):
-        fields = {}
-        if "timezone" in form.cleaned_data:
-            fields["timezone"] = form.cleaned_data["timezone"]
-        if "language" in form.cleaned_data:
-            fields["language"] = form.cleaned_data["language"]
-        if fields:
-            account = self.request.user.account
-            for k, v in fields.items():
-                setattr(account, k, v)
-            account.save()
+        instance = form.save()
+        import pdb;pdb.set_trace()
+        instance.avatar = form.cleaned_data.get('avatar')
+        instance.save()
 
     def get_redirect_field_name(self):
         return self.redirect_field_name

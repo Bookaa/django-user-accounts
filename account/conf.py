@@ -35,6 +35,7 @@ class AccountAppConf(AppConf):
     PASSWORD_RESET_REDIRECT_URL = "account_login"
     REMEMBER_ME_EXPIRY = 60 * 60 * 24 * 365 * 10
     USER_DISPLAY = lambda user: user.username
+    USERNAME_PATTERN = r"^\w+$"
     CREATE_ON_SAVE = True
     EMAIL_UNIQUE = True
     EMAIL_CONFIRMATION_REQUIRED = False
@@ -55,6 +56,7 @@ class AccountAppConf(AppConf):
         for code, lang in settings.LANGUAGES
     ]
     USE_AUTH_AUTHENTICATE = False
+    MODEL = None
 
     def configure_deletion_mark_callback(self, value):
         return load_path_attr(value)
