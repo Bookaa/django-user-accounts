@@ -729,7 +729,6 @@ class SettingsView(LoginRequiredMixin, FormView):
 
     def update_account(self, form):
         instance = form.save()
-        import pdb;pdb.set_trace()
         instance.avatar = form.cleaned_data.get('avatar')
         instance.save()
 
