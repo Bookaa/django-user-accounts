@@ -194,16 +194,7 @@ class PasswordResetTokenForm(forms.Form):
 
 class SettingsForm(forms.ModelForm):
 
-    email = forms.EmailField(label=_("Email"), required=True)
-
-    def clean_email(self):
-        value = self.cleaned_data["email"]
-        if self.initial.get("email") == value:
-            return value
-        qs = EmailAddress.objects.filter(email__iexact=value)
-        if not qs.exists() or not settings.ACCOUNT_EMAIL_UNIQUE:
-            return value
-        raise forms.ValidationError(_("A user is registered with this email address."))
+    signature = forms.CharField(max_length=160, required=False)
 
     class Meta:
         model = Account
