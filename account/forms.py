@@ -194,8 +194,37 @@ class PasswordResetTokenForm(forms.Form):
 
 class SettingsForm(forms.ModelForm):
 
+    username = forms.CharField(
+        label=_("Nickname"),
+        max_length=30,
+        widget=forms.TextInput(),
+        required=False
+    )
     signature = forms.CharField(max_length=160, required=False)
+
+
+    def clean_username(self):
+        if self.cleaned_data["username"] == self.instance.user.username:
+            return self.cleaned_data["username"]
+
+        if not alnum_re.search(self.cleaned_data["username"]):
+            raise forms.ValidationError(_("Usernames can only contain letters, numbers and underscores."))
+        User = get_user_model()
+        lookup_kwargs = get_user_lookup_kwargs({
+            "{username}__iexact": self.cleaned_data["username"]
+        })
+        qs = User.objects.filter(**lookup_kwargs)
+        if not qs.exists():
+            return self.cleaned_data["username"]
+        raise forms.ValidationError(_("This username is already taken. Please choose another."))
 
     class Meta:
         model = Account
-        exclude = ['user']
+        exclude = ['user', 'city', 'province', 'phone', 'realname', 'district', 'street']
+
+
+class AddressForm(forms.ModelForm):
+
+    class Meta:
+        model = Account
+        fields = ['realname', 'city', 'province', 'district', 'street', 'phone']
