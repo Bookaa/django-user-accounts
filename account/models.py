@@ -29,7 +29,7 @@ from account.managers import EmailAddressManager, EmailConfirmationManager
 from account.signals import signup_code_sent, signup_code_used
 
 class AbstractAccount(models.Model):
-    user = models.OneToOneField(AUTH_USER_MODEL, related_name="account", verbose_name=_("user"))
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name="account", verbose_name=_("user"))
 
     @classmethod
     def for_request(cls, request):
